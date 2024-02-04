@@ -1,0 +1,1 @@
+"""Module to handle the embedding of reference and candidate texts"""
