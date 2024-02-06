@@ -8,7 +8,7 @@ Key Features:
 - Handles tokenization, padding, and application of Inverse Document Frequency (IDF) weights internally.
 - Optimized to run on GPU devices for accelerated computation, with automatic fallback to CPU if GPU is not available.
 
-Example Usage:
+Example Usage:s
     from text_embedder import TextEmbedder
     
     # Initialize the embedder with a specific transformer model
@@ -30,6 +30,7 @@ from functools import partial
 from itertools import chain
 from math import log
 from multiprocessing import Pool
+from typing import Union
 
 import torch
 from transformers import AutoTokenizer, AutoModel
@@ -87,7 +88,7 @@ class TextEmbedder:
     """
 
     
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(self, model_name: Union[str, None] = None) -> None:
         # Set the model name to the provided value or to a default if not provided
         self.model_name = model_name if model_name else 'distilbert-base-uncased'
         
@@ -400,5 +401,3 @@ class TextEmbedder:
 
         # Return the prepared data structures for model processing
         return padded_ids, padded_idf, seq_lengths, attention_mask, tokens
-    
-
