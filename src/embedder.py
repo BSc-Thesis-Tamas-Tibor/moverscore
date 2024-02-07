@@ -155,7 +155,6 @@ class TextEmbedder:
                 # Encode the current batch of sentences to get embeddings
                 batch_embedding = self.encode(padded_ids[i:i+batch_size],
                                               attention_mask=attention_mask[i:i+batch_size])
-                                              attention_mask=attention_mask[i:i+batch_size])
 
                 # Stack the embeddings from the current batch
                 # batch_embedding = torch.stack(batch_embedding)
@@ -224,30 +223,6 @@ class TextEmbedder:
         # Return the prepared data structures for model processing
         return padded_ids, padded_idf, seq_lengths, attention_mask, tokens
 
-    def truncate(self, tokens: list) -> list:
-        """
-        Truncates a list of tokens to a maximum length allowed by the tokenizer.
-
-        This method ensures that the token list does not exceed the maximum sequence
-        length that the tokenizer can handle. It accounts for the addition of special
-        tokens ([CLS] and [SEP]) which are added in a seperate method.
-
-        Args:
-            tokens (list): A list of tokens representing a tokenized text.
-
-        Returns:
-            list: A truncated list of tokens if the original list exceeded the
-                maximum length; otherwise, the original list of tokens.
-        """
-
-        # Check if the length of the token list exceeds the maximum model input length minus 2
-        if len(tokens) > self.tokenizer.model_max_length - 2:
-            # Truncate the token list to fit within the maximum input length,
-            # leaving space for the [CLS] and [SEP] tokens
-            tokens = tokens[0:(self.tokenizer.model_max_length - 2)]
-
-        return tokens
-
     def encode(self,
                input_tensor: torch.Tensor,
                attention_mask: torch.Tensor,
@@ -279,6 +254,30 @@ class TextEmbedder:
             result = self.model(input_tensor, attention_mask=attention_mask)
 
         return result[last_hidden_state]
+
+    def truncate(self, tokens: list) -> list:
+        """
+        Truncates a list of tokens to a maximum length allowed by the tokenizer.
+
+        This method ensures that the token list does not exceed the maximum sequence
+        length that the tokenizer can handle. It accounts for the addition of special
+        tokens ([CLS] and [SEP]) which are added in a seperate method.
+
+        Args:
+            tokens (list): A list of tokens representing a tokenized text.
+
+        Returns:
+            list: A truncated list of tokens if the original list exceeded the
+                maximum length; otherwise, the original list of tokens.
+        """
+
+        # Check if the length of the token list exceeds the maximum model input length minus 2
+        if len(tokens) > self.tokenizer.model_max_length - 2:
+            # Truncate the token list to fit within the maximum input length,
+            # leaving space for the [CLS] and [SEP] tokens
+            tokens = tokens[0:(self.tokenizer.model_max_length - 2)]
+
+        return tokens
 
     def tokenize_text(self, input_text: str) -> list:
         """
