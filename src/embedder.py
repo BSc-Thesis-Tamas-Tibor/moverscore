@@ -24,7 +24,6 @@ This module requires the transformers library and PyTorch, along with their depe
 """
 
 
-
 from collections import defaultdict, Counter
 from functools import partial
 from itertools import chain
@@ -35,6 +34,7 @@ from typing import Union
 import torch
 from transformers import AutoTokenizer, AutoModel
 from torch.cuda import is_available
+
 
 class TextEmbedder:
     """
@@ -87,7 +87,6 @@ class TextEmbedder:
         >>> embeddings, seq_lengths, attention_mask, padded_idf, tokens = embedder(sentences)
     """
 
-    
     def __init__(self, model_name: Union[str, None] = None) -> None:
         # Set the model name to the provided value or to a default if not provided
         self.model_name = model_name if model_name else 'distilbert-base-uncased'
@@ -148,7 +147,7 @@ class TextEmbedder:
 
                 # Encode the current batch of sentences to get embeddings
                 batch_embedding = self.encode(padded_ids[i:i+batch_size],
-                                            attention_mask=attention_mask[i:i+batch_size])
+                                              attention_mask=attention_mask[i:i+batch_size])
 
                 # Stack the embeddings from the current batch
                 # batch_embedding = torch.stack(batch_embedding)
@@ -210,7 +209,6 @@ class TextEmbedder:
 
         return tokens
 
-
     def process_text(self, input_text: str) -> set:
         """
         Processes the input text to produce a set of unique token IDs.
@@ -234,7 +232,6 @@ class TextEmbedder:
 
         # Return a set of token IDs
         return set(ids)
-
 
     def create_idf_dict(self, input_texts: list, n_threads: int = 4) -> defaultdict:
         """
@@ -271,7 +268,7 @@ class TextEmbedder:
             idf_counter.update(chain.from_iterable(p.map(process_text_partial, input_texts)))
 
         # Initialize the IDF dictionary with a default value for unseen tokens
-        idf_dict = defaultdict(lambda: log((num_docs+1)/(1)))
+        idf_dict = defaultdict(lambda: log((num_docs+1)/1))
 
         # Update the IDF dictionary with computed IDF values for each token
         # IDF is calculated using the formula: log((num_docs + 1) / (token_frequency + 1))
