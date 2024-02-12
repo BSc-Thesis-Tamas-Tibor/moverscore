@@ -40,7 +40,6 @@ from transformers import AutoTokenizer, AutoModel
 from torch.cuda import is_available
 
 
-
 class TextEmbedder:
     """
     A comprehensive class for generating text embeddings using pre-trained transformer models.
@@ -254,29 +253,51 @@ class TextEmbedder:
 
         return result[last_hidden_state]
 
-    def truncate(self, tokens: list) -> list:
+    def create_idf_dict(self, input_texts: list, n_threads: int = 4) -> defaultdict:
         """
-        Truncates a list of tokens to a maximum length allowed by the tokenizer.
+        Creates an Inverse Document Frequency (IDF) dictionary for a given list of input texts.
 
-        This method ensures that the token list does not exceed the maximum sequence
-        length that the tokenizer can handle. It accounts for the addition of special
-        tokens ([CLS] and [SEP]) which are added in a seperate method.
+        This method processes the input texts to calculate the frequency of each unique token
+        across all documents. It then computes the IDF for each token, which measures how common
+        or rare a token is across the given documents.
 
         Args:
-            tokens (list): A list of tokens representing a tokenized text.
+            input_texts (list): A list of strings where each string is a document from which to calculate IDFs.
+            n_threads (int, optional): The number of threads to use for parallel processing of texts. Defaults to 4.
 
         Returns:
-            list: A truncated list of tokens if the original list exceeded the
-                maximum length; otherwise, the original list of tokens.
+            defaultdict: A dictionary where keys are token indices (or IDs) and values
+                        are their corresponding IDF scores.Tokens not seen in the input
+                        texts are assigned a default IDF score based on the total number of documents.
+
         """
 
-        # Check if the length of the token list exceeds the maximum model input length minus 2
-        if len(tokens) > self.tokenizer.model_max_length - 2:
-            # Truncate the token list to fit within the maximum input length,
-            # leaving space for the [CLS] and [SEP] tokens
-            tokens = tokens[0:(self.tokenizer.model_max_length - 2)]
+        # Initialize a counter to keep track of token frequencies across documents
+        idf_counter = Counter()
 
-        return tokens
+        # Calculate the total number of documents
+        num_docs = len(input_texts)
+
+        # Create a partial function for processing text
+        process_text_partial = partial(self.process_text)
+
+        # Use multiprocessing Pool to parallelize the processing of texts
+        with Pool(n_threads) as pool:
+
+            # Update the counter with the frequency of tokens from all documents
+            # chain.from_iterable is used to flatten the list of lists of tokens into a single list
+            idf_counter.update(chain.from_iterable(
+                pool.map(process_text_partial, input_texts)))
+
+        # Initialize the IDF dictionary with a default value for unseen tokens
+        idf_dict = defaultdict(lambda: log((num_docs + 1) / (1)))
+
+        # Update the IDF dictionary with computed IDF values for each token
+        # IDF is calculated using the formula: log((num_docs + 1) / (token_frequency + 1))
+        idf_dict.update({idx: log((num_docs + 1) / (c + 1))
+                        for (idx, c) in idf_counter.items()})
+
+        return idf_dict
 
     def tokenize_text(self, input_text: str) -> list:
         """
@@ -325,52 +346,6 @@ class TextEmbedder:
         # Return a set of token IDs
         return set(ids)
 
-    def create_idf_dict(self, input_texts: list, n_threads: int = 4) -> defaultdict:
-        """
-        Creates an Inverse Document Frequency (IDF) dictionary for a given list of input texts.
-
-        This method processes the input texts to calculate the frequency of each unique token
-        across all documents. It then computes the IDF for each token, which measures how common
-        or rare a token is across the given documents.
-
-        Args:
-            input_texts (list): A list of strings where each string is a document from which to calculate IDFs.
-            n_threads (int, optional): The number of threads to use for parallel processing of texts. Defaults to 4.
-
-        Returns:
-            defaultdict: A dictionary where keys are token indices (or IDs) and values 
-                        are their corresponding IDF scores.Tokens not seen in the input 
-                        texts are assigned a default IDF score based on the total number of documents.
-
-        """
-
-        # Initialize a counter to keep track of token frequencies across documents
-        idf_counter = Counter()
-
-        # Calculate the total number of documents
-        num_docs = len(input_texts)
-
-        # Create a partial function for processing text
-        process_text_partial = partial(self.process_text)
-
-        # Use multiprocessing Pool to parallelize the processing of texts
-        with Pool(n_threads) as pool:
-
-            # Update the counter with the frequency of tokens from all documents
-            # chain.from_iterable is used to flatten the list of lists of tokens into a single list
-            idf_counter.update(chain.from_iterable(
-                pool.map(process_text_partial, input_texts)))
-
-        # Initialize the IDF dictionary with a default value for unseen tokens
-        idf_dict = defaultdict(lambda: log((num_docs + 1) / (1)))
-
-        # Update the IDF dictionary with computed IDF values for each token
-        # IDF is calculated using the formula: log((num_docs + 1) / (token_frequency + 1))
-        idf_dict.update({idx: log((num_docs + 1) / (c + 1))
-                        for (idx, c) in idf_counter.items()})
-
-        return idf_dict
-
     @staticmethod
     def padding(sequences: list, pad_token: int, dtype: torch.dtype = torch.long) -> tuple:
         """
@@ -417,3 +392,27 @@ class TextEmbedder:
             mask[i, :sequence_lengths[i]] = 1
 
         return padded, sequence_lengths, mask
+
+    def truncate(self, tokens: list) -> list:
+        """
+        Truncates a list of tokens to a maximum length allowed by the tokenizer.
+
+        This method ensures that the token list does not exceed the maximum sequence
+        length that the tokenizer can handle. It accounts for the addition of special
+        tokens ([CLS] and [SEP]) which are added in a seperate method.
+
+        Args:
+            tokens (list): A list of tokens representing a tokenized text.
+
+        Returns:
+            list: A truncated list of tokens if the original list exceeded the
+                maximum length; otherwise, the original list of tokens.
+        """
+
+        # Check if the length of the token list exceeds the maximum model input length minus 2
+        if len(tokens) > self.tokenizer.model_max_length - 2:
+            # Truncate the token list to fit within the maximum input length,
+            # leaving space for the [CLS] and [SEP] tokens
+            tokens = tokens[0:(self.tokenizer.model_max_length - 2)]
+
+        return tokens
