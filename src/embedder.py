@@ -92,7 +92,6 @@ class TextEmbedder:
         >>> embeddings, seq_lengths, attention_mask, padded_idf, tokens = embedder(sentences)
     """
 
-
     def __init__(self, model_name: Union[str, None] = None) -> None:
         # Set the model name to the provided value or to a default if not provided
         self.model_name = model_name if model_name else 'distilbert-base-uncased'
