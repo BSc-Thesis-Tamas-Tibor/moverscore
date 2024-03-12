@@ -11,8 +11,8 @@ weights internally.
 - Optimized to run on GPU devices for accelerated computation, 
 with automatic fallback to CPU if GPU is not available.
 
-Example Usage:s
-    from text_embedder import TextEmbedder
+Example Usage:
+    from text_embedder import TextEmbedder  
     
     # Initialize the embedder with a specific transformer model
     embedder = TextEmbedder(model_name='bert-base-uncased')
@@ -27,12 +27,9 @@ This module requires the transformers library and PyTorch, along with their depe
 to be installed in your environment.
 """
 
-
 from collections import defaultdict, Counter
-from functools import partial
 from itertools import chain
 from math import log
-from multiprocessing import Pool
 from typing import Union
 
 import torch
@@ -46,7 +43,7 @@ class TextEmbedder:
 
     This class abstracts the complexity involved in text preprocessing, tokenization, embedding generation,
     and post-processing for NLP tasks. It leverages Hugging Face's transformers library to utilize pre-trained
-    models such as BERT, DistilBERT, etc., for embedding generation. The class is designed to be flexible and 
+    models such as BERT, DistilBERT, etc., for embedding generation. The class is designed to be flexible and
     efficient, allowing for batch processing of text data and utilization of GPU resources if available.
 
     Attributes:
@@ -93,10 +90,10 @@ class TextEmbedder:
 
     def __init__(self, model_name: Union[str, None] = None) -> None:
         # Set the model name to the provided value or to a default if not provided
-        self.model_name = model_name if model_name else 'distilbert-base-uncased'
+        self.model_name = model_name if model_name else "distilbert-base-uncased"
 
         # Determine the computing device based on the availability of CUDA (GPU support)
-        self.device = 'cuda' if is_available() else 'cpu'
+        self.device = "cuda" if is_available() else "cpu"
 
         # Load the tokenizer corresponding to the specified (or default) model
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -114,10 +111,10 @@ class TextEmbedder:
         """
         Generates embeddings for a list of sentences, processing them in batches.
 
-        This method acts as a callable interface for the class, allowing the user to 
-        directly generate embeddings for a list of input sentences. It preprocesses the 
-        sentences by tokenizing, applying IDF weights, padding to uniform length, and 
-        then computes the embeddings using the BERT model or a similar transformer model. 
+        This method acts as a callable interface for the class, allowing the user to
+        directly generate embeddings for a list of input sentences. It preprocesses the
+        sentences by tokenizing, applying IDF weights, padding to uniform length, and
+        then computes the embeddings using the BERT model or a similar transformer model.
 
         Args:
             sentences (list): A list of sentences to be encoded into embeddings.
@@ -135,8 +132,7 @@ class TextEmbedder:
         """
 
         # Prepare input sentences for embedding generation
-        padded_ids, padded_idf, seq_lengths, attention_mask, tokens = self.collate_idf(
-            sentences)
+        padded_ids, padded_idf, _, attention_mask, tokens = self.collate_idf(sentences)
 
         # Set batch size to total number of sentences if batch_size is -1, otherwise use specified batch_size
         batch_size = len(sentences) if batch_size == -1 else batch_size
@@ -151,8 +147,10 @@ class TextEmbedder:
             for i in range(0, len(sentences), batch_size):
 
                 # Encode the current batch of sentences to get embeddings
-                batch_embedding = self.encode(padded_ids[i:i+batch_size],
-                                              attention_mask=attention_mask[i:i+batch_size])
+                batch_embedding = self.encode(
+                    padded_ids[i : i + batch_size],
+                    attention_mask=attention_mask[i : i + batch_size],
+                )
 
                 # Stack the embeddings from the current batch
                 # batch_embedding = torch.stack(batch_embedding)
@@ -167,11 +165,9 @@ class TextEmbedder:
         total_embedding = torch.cat(embeddings, dim=-3)
 
         # Return the final embeddings and additional useful information
-        return total_embedding, seq_lengths, attention_mask, padded_idf, tokens
+        return total_embedding, padded_idf, tokens
 
-    def collate_idf(self,
-                    sequences: list,
-                    pad: str = "[PAD]"):
+    def collate_idf(self, sequences: list, pad: str = "[PAD]"):
         """
         Prepares input sequences for model processing, including padding and IDF weighting.
 
@@ -187,7 +183,7 @@ class TextEmbedder:
         Returns:
             tuple: A tuple containing the following elements:
                 - padded_ids (torch.Tensor): A tensor containing the padded numerical IDs of the input sequences.
-                - padded_idf (torch.Tensor): A tensor of the same shape as `padded_ids`, 
+                - padded_idf (torch.Tensor): A tensor of the same shape as `padded_ids`,
                 containing IDF weights for each token.
                 - seq_lengths (torch.Tensor): A tensor containing the original lengths of the sequences before padding.
                 - attention_mask (torch.Tensor): A binary tensor indicating which elements are tokens and padding.
@@ -211,25 +207,25 @@ class TextEmbedder:
         pad_token = self.tokenizer.convert_tokens_to_ids([pad])[0]
 
         # Pad the sequences of token IDs to uniform length and generate attention masks
-        padded_ids, seq_lengths, attention_mask = self.padding(
-            id_sequences, pad_token)
+        padded_ids, seq_lengths, attention_mask = self.padding(id_sequences, pad_token)
 
         # Similarly, pad the sequences of IDF weights to match the padded token IDs
-        padded_idf, _, _ = self.padding(
-            idf_weights, pad_token, dtype=torch.float)
+        padded_idf, _, _ = self.padding(idf_weights, pad_token, dtype=torch.float)
 
         # Return the prepared data structures for model processing
         return padded_ids, padded_idf, seq_lengths, attention_mask, tokens
 
-    def encode(self,
-               input_tensor: torch.Tensor,
-               attention_mask: torch.Tensor,
-               last_hidden_state: int = 0) -> tuple:
+    def encode(
+        self,
+        input_tensor: torch.Tensor,
+        attention_mask: torch.Tensor,
+        last_hidden_state: int = 0,
+    ) -> tuple:
         """
         Generates embeddings from the model for the given input tensor and attention mask.
 
         This method sets the model to evaluation mode and passes the input tensor along
-        with an attention mask through the model to obtain embeddings. 
+        with an attention mask through the model to obtain embeddings.
 
         Args:
             input_tensor (torch.Tensor): The input tensor to the model.
@@ -253,7 +249,55 @@ class TextEmbedder:
 
         return result[last_hidden_state]
 
-    def create_idf_dict(self, input_texts: list, n_threads: int = 4) -> defaultdict:
+    def tokenize_text(self, input_text: str) -> list:
+        """
+        Tokenizes the input text, adding special tokens at the beginning and end.
+
+        This method tokenizes the given text, prepends the '[CLS]' token at the beginning,
+        appends the '[SEP]' token at the end,
+        and ensures the tokenized text does not exceed the maximum sequence length allowed
+        by the model, truncating it if necessary.
+
+        Args:
+            input_text (str): The text to tokenize.
+
+        Returns:
+            list: A list of tokens representing the input text, including '[CLS]' at the
+                beginning, '[SEP]' at the end.
+        """
+
+        # Tokenize the input text
+        tokens = (
+            ["[CLS]"] + self.truncate(self.tokenizer.tokenize(input_text)) + ["[SEP]"]
+        )
+
+        return tokens
+
+    def process_text(self, input_text: str) -> list:
+        """
+        Processes the input text to produce a set of unique token IDs.
+
+        This method first tokenizes the input text, including the addition of special
+        tokens ('[CLS]' at the start and '[SEP]' at the end) and truncation to the model's
+        maximum sequence length.
+
+        Args:
+            input_text (str): The text to process.
+
+        Returns:
+            set: A set of unique token IDs representing the processed input text.
+        """
+
+        # Tokenize the input text, including special tokens
+        tokens = self.tokenize_text(input_text)
+
+        # Convert tokens to their corresponding IDs for model processing
+        ids = self.tokenizer.convert_tokens_to_ids(tokens)
+
+        # Return a set of token IDs
+        return ids
+
+    def create_idf_dict(self, input_texts: list) -> defaultdict:
         """
         Creates an Inverse Document Frequency (IDF) dictionary for a given list of input texts.
 
@@ -273,81 +317,32 @@ class TextEmbedder:
         """
 
         # Initialize a counter to keep track of token frequencies across documents
-        idf_counter = Counter()
+        counter = Counter()
 
         # Calculate the total number of documents
         num_docs = len(input_texts)
 
-        # Create a partial function for processing text
-        process_text_partial = partial(self.process_text)
+        # Create a list of the ids by flattening the input list of texts
+        ids = list(chain.from_iterable([self.process_text(doc) for doc in input_texts]))
 
-        # Use multiprocessing Pool to parallelize the processing of texts
-        with Pool(n_threads) as pool:
-
-            # Update the counter with the frequency of tokens from all documents
-            # chain.from_iterable is used to flatten the list of lists of tokens into a single list
-            idf_counter.update(chain.from_iterable(
-                pool.map(process_text_partial, input_texts)))
+        # Update the counter with the occurencies of the different tokens
+        counter.update(ids)
 
         # Initialize the IDF dictionary with a default value for unseen tokens
         idf_dict = defaultdict(lambda: log((num_docs + 1) / (1)))
 
         # Update the IDF dictionary with computed IDF values for each token
-        # IDF is calculated using the formula: log((num_docs + 1) / (token_frequency + 1))
-        idf_dict.update({idx: log((num_docs + 1) / (c + 1))
-                        for (idx, c) in idf_counter.items()})
+        # IDF is calculated using the formula: log((num_docs) / (token_frequency + 1))
+        idf_dict.update(
+            {idx: log((num_docs) / (c + 1)) for (idx, c) in counter.items()}
+        )
 
         return idf_dict
 
-    def tokenize_text(self, input_text: str) -> list:
-        """
-        Tokenizes the input text, adding special tokens at the beginning and end.
-
-        This method tokenizes the given text, prepends the '[CLS]' token at the beginning, 
-        appends the '[SEP]' token at the end,
-        and ensures the tokenized text does not exceed the maximum sequence length allowed
-        by the model, truncating it if necessary.
-
-        Args:
-            input_text (str): The text to tokenize.
-
-        Returns:
-            list: A list of tokens representing the input text, including '[CLS]' at the
-                beginning, '[SEP]' at the end.
-        """
-
-        # Tokenize the input text
-        tokens = ["[CLS]"] + \
-            self.truncate(self.tokenizer.tokenize(input_text)) + ["[SEP]"]
-
-        return tokens
-
-    def process_text(self, input_text: str) -> set:
-        """
-        Processes the input text to produce a set of unique token IDs.
-
-        This method first tokenizes the input text, including the addition of special
-        tokens ('[CLS]' at the start and '[SEP]' at the end) and truncation to the model's
-        maximum sequence length. 
-
-        Args:
-            input_text (str): The text to process.
-
-        Returns:
-            set: A set of unique token IDs representing the processed input text.
-        """
-
-        # Tokenize the input text, including special tokens
-        tokens = self.tokenize_text(input_text)
-
-        # Convert tokens to their corresponding IDs for model processing
-        ids = self.tokenizer.convert_tokens_to_ids(tokens)
-
-        # Return a set of token IDs
-        return set(ids)
-
     @staticmethod
-    def padding(sequences: list, pad_token: int, dtype: torch.dtype = torch.long) -> tuple:
+    def padding(
+        sequences: list, pad_token: int, dtype: torch.dtype = torch.long
+    ) -> tuple:
         """
         Pads sequences to the same length and creates a mask to identify padded elements.
 
@@ -362,10 +357,10 @@ class TextEmbedder:
 
         Returns:
             tuple: A tuple containing three elements:
-                - padded (torch.Tensor): A tensor of shape (len(sequences), max_seq_length) 
+                - padded (torch.Tensor): A tensor of shape (len(sequences), max_seq_length)
                 containing the padded sequences.
                 - sequence_lengths (torch.Tensor): A tensor containing the original lengths of each sequence.
-                - mask (torch.Tensor): A tensor of the same shape as `padded`, 
+                - mask (torch.Tensor): A tensor of the same shape as `padded`,
                 where elements are 1 if part of the original sequence and 0 if padded.
         """
         # Calculate the original lengths of all sequences
@@ -375,8 +370,7 @@ class TextEmbedder:
         max_seq_length = sequence_lengths.max().item()
 
         # Create a tensor filled with the pad_token up to the max sequence length for all sequences
-        padded = torch.full((len(sequences), max_seq_length),
-                            pad_token, dtype=dtype)
+        padded = torch.full((len(sequences), max_seq_length), pad_token, dtype=dtype)
 
         # Initialize a mask tensor with zeros, indicating all elements are initially considered padding
         mask = torch.zeros(len(sequences), max_seq_length, dtype=dtype)
@@ -385,11 +379,10 @@ class TextEmbedder:
         for i, seq in enumerate(sequences):
 
             # Set the actual sequence values in the `padded` tensor up to the length of the sequence
-            padded[i, :sequence_lengths[i]] = torch.tensor(
-                list(seq), dtype=dtype)
+            padded[i, : sequence_lengths[i]] = torch.tensor(list(seq), dtype=dtype)
 
             # Update the mask to 1 for positions corresponding to the actual sequence elements
-            mask[i, :sequence_lengths[i]] = 1
+            mask[i, : sequence_lengths[i]] = 1
 
         return padded, sequence_lengths, mask
 
@@ -413,6 +406,6 @@ class TextEmbedder:
         if len(tokens) > self.tokenizer.model_max_length - 2:
             # Truncate the token list to fit within the maximum input length,
             # leaving space for the [CLS] and [SEP] tokens
-            tokens = tokens[0:(self.tokenizer.model_max_length - 2)]
+            tokens = tokens[0 : (self.tokenizer.model_max_length - 2)]
 
         return tokens
