@@ -131,13 +131,15 @@ class MoverScore:
 
         Args:
             batch_start (int): The starting index of the batch in the reference and hypothesis lists.
+            references (List[str]): The list of the reference document strings
+            hypothesis (List[str]): The list of the hypothesis document strings
 
         Returns:
             A list of MoverScores for the processed batch.
         """
         # Slices the reference and hypothesis lists to get the current batch
-        batch_refs = references[batch_start : batch_start + self.config.batch_size]
-        batch_hyps = hypothesis[batch_start : batch_start + self.config.batch_size]
+        batch_refs = references[batch_start: batch_start + self.config.batch_size]
+        batch_hyps = hypothesis[batch_start: batch_start + self.config.batch_size]
 
         # Embed texts from the batch
         ref_data, hyp_data = self.embed_texts(batch_refs, batch_hyps)
@@ -271,7 +273,7 @@ class MoverScore:
 
         # Assign IDF weights to cost vectors
         cost_1[: len(ref_idf[index])] = ref_idf[index]
-        cost_2[len(ref_idf[index]) :] = hyp_idf[index]
+        cost_2[len(ref_idf[index]):] = hyp_idf[index]
 
         # Normalize the cost vectors
         cost_1 = MoverScore.safe_divide(cost_1, np.sum(cost_1))
@@ -279,13 +281,13 @@ class MoverScore:
         dst = distance_matrix[index]
 
         # Calculate EMD and return the inverse score for similarity
-        _, flow = emd_with_flow(cost_1, cost_2, dst)
+        _, flow = emd_with_flow(np.array(cost_1), np.array(cost_2), dst)
         flow = np.array(flow, dtype=np.float32)
 
         return 1.0 / (1.0 + np.sum(flow * dst))
 
     @staticmethod
-    def safe_divide(numerator: float, denominator: float) -> float:
+    def safe_divide(numerator: np.ndarray, denominator: float) -> float:
         """
         Safely divides two numbers to prevent division by zero errors.
 
