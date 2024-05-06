@@ -9,7 +9,7 @@ from pyemd import emd_with_flow
 from torch import Tensor, baddbmm, norm, cat
 from torch.cuda import is_available
 
-from src.embedder import TextEmbedder
+from MoverScorePlus.embedder import TextEmbedder
 
 
 class TextData(NamedTuple):
