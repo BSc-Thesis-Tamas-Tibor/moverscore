@@ -25,9 +25,17 @@ pip install -r requirements.txt
 
 Follow these examples to use the scripts:
 
+1. Clone the reposity into your working folder
+
+```bash
+git clone https://github.com/BSc-Thesis-Tamas-Tibor/moverscore.git
+```
+
+2. Use the package as follows:
+
 ```python
 # Example usage of the moverscore.py script
-from src.moverscore import MoverScore, MoverScoreConfig
+from MoverScorePlus import MoverScore, MoverScoreConfig
 config = MoverScoreConfig(stop_words=["<Your stopwords>"])
 
 # Create the configuration of the score
