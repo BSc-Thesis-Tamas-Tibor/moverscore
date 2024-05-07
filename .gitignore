@@ -3,3 +3,5 @@
 /.venv/
 test.ipynb
 bsc_thesis.code-workspace
+data/
+.DS_store
