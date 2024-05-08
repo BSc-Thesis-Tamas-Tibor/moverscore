@@ -141,6 +141,10 @@ class TextEmbedder:
         # Initialize list to store batch embeddings
         embeddings = []
 
+        padded_ids.to(self.device)
+        padded_idf.to(self.device)
+        attention_mask.to(self.device)
+
         # Generate embeddings without computing gradients for efficiency
         with torch.no_grad():
 
