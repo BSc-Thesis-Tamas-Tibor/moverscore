@@ -141,10 +141,6 @@ class TextEmbedder:
         # Initialize list to store batch embeddings
         embeddings = []
 
-        padded_ids.to(self.device)
-        padded_idf.to(self.device)
-        attention_mask.to(self.device)
-
         # Generate embeddings without computing gradients for efficiency
         with torch.no_grad():
 
@@ -262,9 +258,6 @@ class TextEmbedder:
         # Send variables to device
         input_tensor = input_tensor.to(self.device)
         attention_mask = attention_mask.to(self.device)
-
-        print(input_tensor.device)
-        print(attention_mask.device)
 
         # Disable gradient calculation for efficiency and to reduce memory usage during inference
         with torch.no_grad():
