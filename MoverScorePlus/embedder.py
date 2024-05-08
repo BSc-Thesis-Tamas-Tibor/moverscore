@@ -151,10 +151,17 @@ class TextEmbedder:
             # Iterate through sentences in batches
             for i in range(0, len(sentences), batch_size):
 
+                ids = padded_ids[i: i + batch_size]
+
+                mask = attention_mask[i: i + batch_size]
+
+                ids.to(self.device)
+                mask.to(self.device)
+
                 # Encode the current batch of sentences to get embeddings
                 batch_embedding = self.encode(
-                    padded_ids[i: i + batch_size],
-                    attention_mask=attention_mask[i: i + batch_size],
+                    ids,
+                    attention_mask=mask,
                 )
 
                 # Stack the embeddings from the current batch
@@ -255,6 +262,9 @@ class TextEmbedder:
         # Send variables to device
         input_tensor.to(self.device)
         attention_mask.to(self.device)
+
+        print(input_tensor.device)
+        print(attention_mask.device)
 
         # Disable gradient calculation for efficiency and to reduce memory usage during inference
         with torch.no_grad():
