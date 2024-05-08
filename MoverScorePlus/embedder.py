@@ -260,8 +260,8 @@ class TextEmbedder:
         self.model.eval()
 
         # Send variables to device
-        input_tensor.to(self.device)
-        attention_mask.to(self.device)
+        input_tensor = input_tensor.to(self.device)
+        attention_mask = attention_mask.to(self.device)
 
         print(input_tensor.device)
         print(attention_mask.device)
