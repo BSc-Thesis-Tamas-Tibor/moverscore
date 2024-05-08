@@ -165,6 +165,9 @@ class TextEmbedder:
         # Concatenate embeddings from all batches into a single tensor
         total_embedding = torch.cat(embeddings, dim=-3)
 
+        # Send embedding tensor to device
+        total_embedding.to(self.device)
+
         # Return the final embeddings and additional useful information
         return total_embedding, padded_idf, tokens
 
