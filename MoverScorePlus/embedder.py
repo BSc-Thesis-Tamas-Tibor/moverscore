@@ -245,6 +245,10 @@ class TextEmbedder:
         # Set the model to evaluation mode.
         self.model.eval()
 
+        # Send variables to device
+        input_tensor.to(self.device)
+        attention_mask.to(self.device)
+
         # Disable gradient calculation for efficiency and to reduce memory usage during inference
         with torch.no_grad():
             # Forward pass through the model with the input tensor and attention mask
